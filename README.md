@@ -19,4 +19,12 @@ If anything fails, the Lightning hold invoice expires and your sats are released
 
 ## Configuration
 
-The LendaSwap API base URL defaults to `https://api.lendaswap.com`. Override with `VITE_LENDASWAP_API_URL` if needed.
+The LendaSwap API doesn't send CORS headers, so requests are temporarily routed through a tiny pass-through proxy at `https://lendaswap-proxy.fly.dev` (source in [`proxy/`](./proxy)). Override with `VITE_LENDASWAP_API_URL` to point at the API directly (e.g. for local API dev).
+
+### Deploying the proxy
+
+```sh
+cd proxy
+fly launch --no-deploy   # only first time; accept the existing fly.toml
+fly deploy
+```

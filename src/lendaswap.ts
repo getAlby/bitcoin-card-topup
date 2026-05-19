@@ -7,8 +7,12 @@ import {
   type SwapStatusHandler,
 } from "@lendasat/lendaswap-sdk-pure";
 
+// CORS workaround: the LendaSwap API doesn't send CORS headers, so we route
+// through a tiny pass-through proxy (see ./proxy). Override with
+// VITE_LENDASWAP_API_URL when running the API locally.
 const API_BASE_URL =
-  import.meta.env.VITE_LENDASWAP_API_URL || "https://api.lendaswap.com";
+  import.meta.env.VITE_LENDASWAP_API_URL ||
+  "https://lendaswap-proxy.fly.dev"; // "https://api.lendaswap.com"
 
 let clientPromise: Promise<Client> | null = null;
 
