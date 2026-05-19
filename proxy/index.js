@@ -1,15 +1,53 @@
-// server.js
-// CORS proxy for api.lendaswap.com
+// CORS + WebSocket pass-through proxy for api.lendaswap.com
 // Usage: yarn install && node index.js
 import express from "express";
+import http from "http";
+import httpProxy from "http-proxy";
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 const UPSTREAM = process.env.UPSTREAM || "https://api.lendaswap.com";
 
-app.use(express.raw({ type: "*/*", limit: "10mb" }));
+const upstreamUrl = new URL(UPSTREAM);
 
-app.use(async (req, res) => {
+const proxy = httpProxy.createProxyServer({
+  target: UPSTREAM,
+  changeOrigin: true,
+  ws: true,
+  secure: true,
+  xfwd: true,
+});
+
+// Strip accept-encoding so upstream replies in plain bytes (avoids gzip/br
+// body+header skew when we forward the body verbatim).
+proxy.on("proxyReq", (proxyReq) => {
+  proxyReq.removeHeader("accept-encoding");
+});
+
+// CORS on every proxied HTTP response.
+proxy.on("proxyRes", (proxyRes, _req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Expose-Headers", "*");
+});
+
+// For websocket upgrades, point the upstream Origin at the real API so it
+// passes any origin checks on its side.
+proxy.on("proxyReqWs", (proxyReq) => {
+  proxyReq.setHeader("origin", upstreamUrl.origin);
+});
+
+proxy.on("error", (err, _req, res) => {
+  console.error("proxy error", err);
+  if (res && !res.headersSent && typeof res.writeHead === "function") {
+    res.writeHead(502, { "content-type": "text/plain" });
+    res.end("Bad Gateway");
+  } else if (res && typeof res.destroy === "function") {
+    res.destroy();
+  }
+});
+
+const app = express();
+
+app.use((req, res) => {
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader(
@@ -23,50 +61,15 @@ app.use(async (req, res) => {
     res.setHeader("Access-Control-Max-Age", "86400");
     return res.sendStatus(204);
   }
-
-  const target = `${UPSTREAM}${req.originalUrl}`;
-  const headers = { ...req.headers };
-  delete headers.host;
-  delete headers["content-length"];
-  delete headers.origin;
-  delete headers.referer;
-  // Force upstream to return uncompressed bytes so we don't have to deal with
-  // gzip/br body+header skew when piping back to the browser.
-  delete headers["accept-encoding"];
-
-  try {
-    const upstream = await fetch(target, {
-      method: req.method,
-      headers,
-      body:
-        req.method === "GET" || req.method === "HEAD"
-          ? undefined
-          : req.body,
-      redirect: "manual",
-    });
-
-    res.status(upstream.status);
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Expose-Headers", "*");
-    upstream.headers.forEach((value, key) => {
-      const k = key.toLowerCase();
-      if (
-        k === "content-encoding" ||
-        k === "transfer-encoding" ||
-        k === "connection" ||
-        k === "content-length"
-      )
-        return;
-      res.setHeader(key, value);
-    });
-    const buf = Buffer.from(await upstream.arrayBuffer());
-    res.send(buf);
-  } catch (err) {
-    console.error("proxy error", err);
-    res.status(502).send("Bad Gateway");
-  }
+  proxy.web(req, res);
 });
 
-app.listen(PORT, () =>
-  console.log(`Proxying ${UPSTREAM} on http://0.0.0.0:${PORT}`),
+const server = http.createServer(app);
+
+server.on("upgrade", (req, socket, head) => {
+  proxy.ws(req, socket, head);
+});
+
+server.listen(PORT, () =>
+  console.log(`Proxying ${UPSTREAM} (HTTP + WS) on http://0.0.0.0:${PORT}`),
 );
