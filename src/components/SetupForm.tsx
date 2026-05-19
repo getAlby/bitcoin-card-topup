@@ -111,7 +111,7 @@ export function SetupForm({ initial, onSave, onCancel }: Props) {
         </select>
       </label>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 pt-2">
         <button
           type="submit"
           className="btn btn-primary flex-1"
