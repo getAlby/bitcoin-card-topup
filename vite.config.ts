@@ -23,7 +23,7 @@ export default defineConfig({
       },
     }),
   ],
-  base: "/bitcoin-card-topup",
+  base: "/",
   server: {
     allowedHosts: true,
   },
