@@ -86,6 +86,7 @@ export async function createTopupSwap(params: {
     targetAmount,
     targetAddress: params.targetAddress,
     gasless: true,
+    referralCode: "lnds_e3f8dd88_f7db93dbf176",
   });
   // Source is BTC_LIGHTNING and target is an EVM token, so the SDK routes through
   // its Lightning→EVM path and returns a LightningToEvmSwapResponse.
