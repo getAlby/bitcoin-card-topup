@@ -10,6 +10,17 @@ export default defineConfig({
     tailwindcss({}),
     VitePWA({
       injectRegister: "auto",
+      // Update the service worker silently on each deploy. Without this,
+      // the first time a returning user opens the PWA after a new release
+      // they get the old cached bundle (no hashBootstrap, etc.) until
+      // they reload again. skipWaiting + clientsClaim makes the new SW
+      // take over immediately on the next page load.
+      registerType: "autoUpdate",
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+      },
       includeAssets: ["mask-icon.svg"],
       manifest: {
         name: "Bitcoin Card Topup",
