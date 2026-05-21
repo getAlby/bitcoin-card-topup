@@ -7,10 +7,6 @@
 //  - Hash fragments are CLIENT-SIDE ONLY — browsers never include them in
 //    HTTP requests, so the NWC secret never reaches GitHub Pages / any
 //    server log / Referer header.
-//  - Immediately after we read the hash we strip it from the URL and the
-//    browser history via history.replaceState, so the secret doesn't sit
-//    in the address bar, get bookmarked, or get captured by any client-side
-//    analytics that reads document.URL.
 //  - Never log the nwc value to the console.
 
 import { isAddress } from "viem";
@@ -25,17 +21,6 @@ export type HashBootstrap = {
   config: CardConfig | null;
   nwcUri: string | null;
 };
-
-function clearHashFromUrl() {
-  if (typeof history === "undefined") return;
-  // Drop the fragment AND any nwc=... so it doesn't sit in the URL bar.
-  // Use replaceState so it also disappears from the back-button history.
-  history.replaceState(
-    null,
-    "",
-    window.location.pathname + window.location.search,
-  );
-}
 
 // Parse a "#label=…&address=…&chainId=…&currency=…&nwc=…" fragment string
 // (with or without a leading '#') into a validated bootstrap object.
@@ -95,11 +80,5 @@ export function readHashBootstrap(): HashBootstrap {
   const raw = window.location.hash;
   if (!raw || raw === "#") return empty;
 
-  const result = parseBootstrapHash(raw);
-
-  // Strip the hash regardless of whether anything was valid, so a stale or
-  // tampered link doesn't linger in the address bar.
-  clearHashFromUrl();
-
-  return result;
+  return parseBootstrapHash(raw);
 }
