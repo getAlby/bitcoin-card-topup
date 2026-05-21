@@ -26,17 +26,6 @@ export type HashBootstrap = {
   nwcUri: string | null;
 };
 
-function clearHashFromUrl() {
-  if (typeof history === "undefined") return;
-  // Drop the fragment AND any nwc=... so it doesn't sit in the URL bar.
-  // Use replaceState so it also disappears from the back-button history.
-  history.replaceState(
-    null,
-    "",
-    window.location.pathname + window.location.search,
-  );
-}
-
 export function readHashBootstrap(): HashBootstrap {
   const empty: HashBootstrap = { config: null, nwcUri: null };
 
@@ -78,10 +67,6 @@ export function readHashBootstrap(): HashBootstrap {
   const nwcRaw = params.get("nwc");
   const nwcUri =
     nwcRaw && nwcRaw.startsWith("nostr+walletconnect://") ? nwcRaw : null;
-
-  // Strip the hash regardless of whether anything was valid, so a stale or
-  // tampered link doesn't linger in the address bar.
-  clearHashFromUrl();
 
   return { config, nwcUri };
 }
