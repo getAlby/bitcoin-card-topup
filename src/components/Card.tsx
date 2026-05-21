@@ -12,38 +12,6 @@ function truncateAddress(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
-// Stylised contact-chip tile, the gold square on a real card.
-function ChipIcon() {
-  return (
-    <svg viewBox="0 0 32 24" className="h-7 w-9" aria-hidden>
-      <defs>
-        <linearGradient id="chip-gradient" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#F8D88A" />
-          <stop offset="50%" stopColor="#D4A857" />
-          <stop offset="100%" stopColor="#8C6B2A" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="24" rx="4" fill="url(#chip-gradient)" />
-      <path
-        d="M0 8h11M0 16h11M21 8h11M21 16h11M11 0v8M21 0v8M11 16v8M21 16v8"
-        stroke="rgba(0,0,0,0.25)"
-        strokeWidth="1"
-        fill="none"
-      />
-      <rect
-        x="11"
-        y="8"
-        width="10"
-        height="8"
-        rx="1"
-        fill="none"
-        stroke="rgba(0,0,0,0.25)"
-        strokeWidth="1"
-      />
-    </svg>
-  );
-}
-
 // Three concentric arcs, the universal contactless-payment glyph.
 function ContactlessIcon() {
   return (
@@ -93,10 +61,7 @@ export function Card({ config }: CardProps) {
       <div className="relative h-full p-5 flex flex-col justify-between">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">
-              Crypto Card
-            </p>
-            <h2 className="mt-1 text-xl font-semibold tracking-tight truncate">
+            <h2 className="text-xl font-semibold tracking-tight truncate">
               {displayLabel}
             </h2>
           </div>
@@ -104,8 +69,7 @@ export function Card({ config }: CardProps) {
         </div>
 
         <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0 space-y-2">
-            <ChipIcon />
+          <div className="min-w-0">
             <p className="font-mono text-xs text-white/80">
               {truncateAddress(config.destinationAddress)}
             </p>
