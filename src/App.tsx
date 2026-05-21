@@ -12,6 +12,7 @@ import { getFiatValue } from "@getalby/lightning-tools";
 import type { WebLNProvider } from "@webbtc/webln-types";
 import PullToRefresh from "pulltorefreshjs";
 import type { SwapStatus } from "@lendasat/lendaswap-sdk-pure";
+import { Card } from "./components/Card";
 import { HamburgerMenu } from "./components/HamburgerMenu";
 import { SetupForm } from "./components/SetupForm";
 import {
@@ -25,7 +26,6 @@ import {
   claimSwap,
   createTopupSwap,
   subscribeToSwap,
-  SUPPORTED_CHAINS,
 } from "./lendaswap";
 
 const PRESET_AMOUNTS = [10, 25, 100];
@@ -41,13 +41,6 @@ const initialBootstrap = readHashBootstrap();
 
 function truncateAddress(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
-
-function chainName(chainId: number): string {
-  return (
-    SUPPORTED_CHAINS.find((c) => c.chainId === chainId)?.name ??
-    `Chain ${chainId}`
-  );
 }
 
 // Terminal statuses where we should stop subscribing and decide success/refund.
@@ -305,58 +298,25 @@ function App() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto space-y-6">
-          <div className="relative aspect-[1.586/1] w-full rounded-2xl bg-black text-white shadow-lg overflow-hidden">
-            <div className="absolute inset-0 p-6 flex flex-col justify-between">
-              <h2 className="text-2xl font-semibold tracking-tight">
-                {config.label || "Card"}
-              </h2>
-              <div className="flex items-end justify-between gap-3">
-                <div className="flex gap-2 flex-wrap">
-                  <span className="badge badge-outline border-white/40 text-white">
-                    {chainName(config.chainId)}
-                  </span>
-                  <span className="badge badge-outline border-white/40 text-white">
-                    {config.currency}
-                  </span>
-                </div>
-                <p className="font-mono text-sm text-white/80">
-                  {truncateAddress(config.destinationAddress)}
-                </p>
-              </div>
-            </div>
-          </div>
+          <Card config={config} />
 
           {(walletBalance !== undefined || isLoadingWallet || provider) && (
-            <div className="px-1">
-              <p className="text-sm font-medium text-base-content/60">
-                Wallet Balance
-              </p>
-              {walletBalance === undefined ? (
-                <p className="text-3xl font-bold">Loading…</p>
-              ) : walletUsdError ? (
-                <>
-                  <p className="text-3xl font-bold text-error">
-                    Failed to load USD rate
-                  </p>
-                  <p className="text-sm text-base-content/60">
-                    {`${new Intl.NumberFormat().format(walletBalance)} sats`}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-3xl font-bold">
-                    {walletUsdValue !== undefined
-                      ? new Intl.NumberFormat(undefined, {
-                          style: "currency",
-                          currency: "USD",
-                        }).format(walletUsdValue)
-                      : "Loading…"}
-                  </p>
-                  <p className="text-sm text-base-content/60">
-                    {`${new Intl.NumberFormat().format(walletBalance)} sats`}
-                  </p>
-                </>
-              )}
+            <div className="flex items-baseline justify-between px-1 text-sm">
+              <span className="text-base-content/60">Wallet balance</span>
+              <span className="font-medium">
+                {walletBalance === undefined
+                  ? "Loading…"
+                  : walletUsdError
+                  ? `${new Intl.NumberFormat().format(walletBalance)} sats`
+                  : walletUsdValue !== undefined
+                  ? `${new Intl.NumberFormat(undefined, {
+                      style: "currency",
+                      currency: "USD",
+                    }).format(walletUsdValue)} · ${new Intl.NumberFormat().format(
+                      walletBalance,
+                    )} sats`
+                  : `${new Intl.NumberFormat().format(walletBalance)} sats`}
+              </span>
             </div>
           )}
 
