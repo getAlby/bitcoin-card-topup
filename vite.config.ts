@@ -21,7 +21,7 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
       },
-      includeAssets: ["mask-icon.svg"],
+      includeAssets: ["mask-icon.svg", "/shortcut-icon-192.png"],
       manifest: {
         name: "Bitcoin Card Topup",
         short_name: "Bitcoin Card Topup",
@@ -30,7 +30,26 @@ export default defineConfig({
         background_color: "#FFFFFF",
         theme_color: "#FFFFFF",
         display: "standalone",
-        icons: [],
+        icons: [
+          {
+            src: "shortcut-icon-192.png",
+            type: "image/png",
+            sizes: "192x192",
+            purpose: "any",
+          },
+          {
+            src: "shortcut-icon.png",
+            type: "image/png",
+            sizes: "512x512",
+            purpose: "any",
+          },
+          {
+            src: "shortcut-icon.png",
+            type: "image/png",
+            sizes: "512x512",
+            purpose: "maskable",
+          },
+        ],
       },
     }),
   ],
