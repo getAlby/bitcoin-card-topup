@@ -20,7 +20,7 @@ import {
   saveCardConfig,
   type CardConfig,
 } from "./config";
-import { readHashBootstrap } from "./hashBootstrap";
+import { parseBootstrapHash, readHashBootstrap } from "./hashBootstrap";
 import {
   claimSwap,
   createTopupSwap,
@@ -193,6 +193,47 @@ function App() {
     setSelectedAmount(null);
   }
 
+  // iOS-installed-PWA workaround. Apple doesn't route in-scope link taps to an
+  // installed standalone PWA, so the user can't reach the app via Alby Hub's
+  // one-tap link (carrying the card config + NWC pairing URI in the URL
+  // fragment) once they've added it to the home screen. The escape hatch: let
+  // them copy the link in Hub, switch to the PWA, and paste here. We reuse the
+  // exact same parser as the hash-bootstrap path. Never log the clipboard
+  // content — it carries the NWC secret.
+  async function handlePasteOneTapLink() {
+    setError(null);
+    if (!navigator.clipboard?.readText) {
+      setError("Your browser doesn't allow reading the clipboard here.");
+      return;
+    }
+    let text: string;
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      setError("Couldn't read the clipboard. Grant permission and try again.");
+      return;
+    }
+    const parsed = parseBootstrapHash(text);
+    if (!parsed.config && !parsed.nwcUri) {
+      setError(
+        "That doesn't look like a one-tap link. Copy the topup link from Alby Hub and try again.",
+      );
+      return;
+    }
+    if (parsed.config) {
+      saveCardConfig(parsed.config);
+      setConfig(parsed.config);
+      setEditing(false);
+    }
+    if (parsed.nwcUri) {
+      try {
+        connectNWC(parsed.nwcUri);
+      } catch {
+        /* swallow — never log the URI */
+      }
+    }
+  }
+
   async function handleTopup() {
     if (!config || !provider || !selectedAmount) return;
     if (selectedAmount < MIN_AMOUNT_USD) {
@@ -272,7 +313,30 @@ function App() {
           </div>
         </div>
         <div className="container mx-auto px-4 py-8">
-          <div className="max-w-md mx-auto">
+          <div className="max-w-md mx-auto space-y-6">
+            {!editing && (
+              <div className="rounded-box border border-base-300 p-4 space-y-2">
+                <p className="text-sm font-medium">
+                  Got a one-tap link from Alby Hub?
+                </p>
+                <p className="text-xs opacity-70">
+                  If you added this app to your home screen, the link won't open
+                  it directly. Copy the link in Hub, then paste it here.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline w-full"
+                  onClick={handlePasteOneTapLink}
+                >
+                  Paste one-tap link
+                </button>
+              </div>
+            )}
+            {error && !editing && (
+              <div role="alert" className="alert alert-error">
+                <span>{error}</span>
+              </div>
+            )}
             <SetupForm
               initial={editing ? config : null}
               onSave={handleSaveConfig}
@@ -299,6 +363,7 @@ function App() {
             onEditCard={() => setEditing(true)}
             onForgetCard={handleForgetCard}
             onDisconnectWallet={() => disconnect()}
+            onPasteOneTapLink={handlePasteOneTapLink}
           />
         </div>
       </div>

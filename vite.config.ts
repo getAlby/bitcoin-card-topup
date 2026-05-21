@@ -27,6 +27,14 @@ export default defineConfig({
         short_name: "Bitcoin Card Topup",
         description: "Instantly top up any crypto debit card with one tap via the Bitcoin Lightning Network",
         scope: "/",
+        start_url: "/",
+        // Android: route in-scope link taps (e.g. Alby Hub's one-tap topup
+        // link, which carries config + NWC URI in the hash) into the existing
+        // PWA window instead of opening a new browser tab. Chrome 102+.
+        // iOS Safari ignores both fields, which is why we also need the
+        // standalone clipboard-paste fallback in App.tsx.
+        launch_handler: { client_mode: "navigate-existing" },
+        handle_links: "preferred",
         background_color: "#FFFFFF",
         theme_color: "#FFFFFF",
         display: "standalone",
@@ -51,10 +59,8 @@ export default defineConfig({
           },
         ],
       },
-    },
-  )
+    }),
   ],
-
   base: "/",
   server: {
     allowedHosts: true,

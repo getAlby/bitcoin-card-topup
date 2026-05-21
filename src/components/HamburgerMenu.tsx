@@ -4,6 +4,7 @@ interface HamburgerMenuProps {
   onEditCard: () => void;
   onForgetCard: () => void;
   onDisconnectWallet: () => void;
+  onPasteOneTapLink: () => void;
 }
 
 export function HamburgerMenu({
@@ -12,6 +13,7 @@ export function HamburgerMenu({
   onEditCard,
   onForgetCard,
   onDisconnectWallet,
+  onPasteOneTapLink,
 }: HamburgerMenuProps) {
   return (
     <div className="dropdown dropdown-end">
@@ -55,6 +57,11 @@ export function HamburgerMenu({
             </button>
           </li>
         )}
+        <li>
+          <button onClick={onPasteOneTapLink} className="text-left">
+            Paste one-tap link
+          </button>
+        </li>
       </ul>
     </div>
   );

@@ -26,15 +26,32 @@ export type HashBootstrap = {
   nwcUri: string | null;
 };
 
-export function readHashBootstrap(): HashBootstrap {
+function clearHashFromUrl() {
+  if (typeof history === "undefined") return;
+  // Drop the fragment AND any nwc=... so it doesn't sit in the URL bar.
+  // Use replaceState so it also disappears from the back-button history.
+  history.replaceState(
+    null,
+    "",
+    window.location.pathname + window.location.search,
+  );
+}
+
+// Parse a "#label=…&address=…&chainId=…&currency=…&nwc=…" fragment string
+// (with or without a leading '#') into a validated bootstrap object.
+// Exported so the clipboard-paste fallback in App.tsx can reuse the exact
+// same validation as the URL-based one-tap link.
+export function parseBootstrapHash(raw: string): HashBootstrap {
   const empty: HashBootstrap = { config: null, nwcUri: null };
+  if (!raw) return empty;
 
-  if (typeof window === "undefined") return empty;
-  const raw = window.location.hash;
-  if (!raw || raw === "#") return empty;
+  // Accept either a full URL or just the fragment. If the user copied the
+  // whole link from Alby Hub (e.g. on iOS), pluck the part after '#'.
+  const hashIndex = raw.indexOf("#");
+  const fragment = hashIndex >= 0 ? raw.slice(hashIndex + 1) : raw;
+  if (!fragment) return empty;
 
-  // URLSearchParams handles "#foo=bar&baz=qux" once we strip the leading #.
-  const params = new URLSearchParams(raw.replace(/^#/, ""));
+  const params = new URLSearchParams(fragment);
   if (![...params.keys()].length) return empty;
 
   // -- Parse config bits (all optional individually, but only commit if the
@@ -69,4 +86,20 @@ export function readHashBootstrap(): HashBootstrap {
     nwcRaw && nwcRaw.startsWith("nostr+walletconnect://") ? nwcRaw : null;
 
   return { config, nwcUri };
+}
+
+export function readHashBootstrap(): HashBootstrap {
+  const empty: HashBootstrap = { config: null, nwcUri: null };
+
+  if (typeof window === "undefined") return empty;
+  const raw = window.location.hash;
+  if (!raw || raw === "#") return empty;
+
+  const result = parseBootstrapHash(raw);
+
+  // Strip the hash regardless of whether anything was valid, so a stale or
+  // tampered link doesn't linger in the address bar.
+  clearHashFromUrl();
+
+  return result;
 }
