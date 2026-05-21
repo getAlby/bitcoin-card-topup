@@ -51,8 +51,48 @@ export default defineConfig({
           },
         ],
       },
-    }),
+    },
+  ),
+  {
+      name: 'ios-pwa-hash-fix',
+      transformIndexHtml(html) {
+        // Injects a synchronous script directly into the index.html head layout
+        const scriptInject = `
+          <script>
+            (function() {
+              if (typeof window === 'undefined') return;
+              var hash = window.location.hash;
+              if (!hash || hash === '#') return;
+              
+              var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+              if (!isIOS) return;
+              
+              if (window.matchMedia('(display-mode: standalone)').matches) return;
+
+              window.addEventListener('DOMContentLoaded', function() {
+                var link = document.querySelector('link[rel="manifest"]');
+                if (!link) return;
+                
+                var baseManifest = {
+                  name: "My App",
+                  short_name: "App",
+                  id: window.location.pathname,
+                  start_url: window.location.pathname + hash,
+                  display: "standalone",
+                  icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }]
+                };
+                
+                link.href = "data:application/manifest+json;base64," + btoa(unescape(encodeURIComponent(JSON.stringify(baseManifest))));
+              });
+            })();
+          </script>
+        `;
+        return html.replace('</head>', `${scriptInject}</head>`);
+      },
+    }
   ],
+
   base: "/",
   server: {
     allowedHosts: true,
