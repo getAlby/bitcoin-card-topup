@@ -36,7 +36,7 @@ interface CardProps {
 }
 
 export function Card({ config }: CardProps) {
-  const displayLabel = config.label?.trim() || "Crypto Card";
+  const displayLabel = config.label?.trim() || "Card";
 
   return (
     <div
