@@ -21,10 +21,19 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
       },
+      // Generate and serve a fresh SW + manifest in dev too. Without this,
+      // a stale SW from a prior preview/prod session keeps trying to precache
+      // assets the dev server doesn't serve, producing workbox 404s and
+      // occasional blank pages.
+      devOptions: {
+        enabled: true,
+        type: "module",
+        navigateFallback: "index.html",
+      },
       includeAssets: ["mask-icon.svg", "/shortcut-icon-192.png"],
       manifest: {
         name: "Bitcoin Card Topup",
-        short_name: "Bitcoin Card Topup",
+        short_name: "Card Topup",
         description: "Instantly top up any crypto debit card with one tap via the Bitcoin Lightning Network",
         scope: "/",
         background_color: "#FFFFFF",

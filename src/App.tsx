@@ -13,6 +13,7 @@ import type { WebLNProvider } from "@webbtc/webln-types";
 import PullToRefresh from "pulltorefreshjs";
 import type { SwapStatus } from "@lendasat/lendaswap-sdk-pure";
 import { Card } from "./components/Card";
+import { ConnectWalletForm } from "./components/ConnectWalletForm";
 import { HamburgerMenu } from "./components/HamburgerMenu";
 import { SetupForm } from "./components/SetupForm";
 import {
@@ -98,6 +99,35 @@ function App() {
     null,
   );
 
+  const connectTimeoutRef = React.useRef<number | undefined>(undefined);
+
+  // Safety net: if the relay is unreachable or the URI is stale, bitcoin-connect
+  // dispatches onConnecting but never onConnected/onDisconnected, leaving the UI
+  // stuck on "Loading…". Reset the loading flag after a generous timeout so the
+  // user can retry.
+  const connectWithNwc = React.useCallback((nwcUri: string) => {
+    // Wrapped — never surface the URI in error traces.
+    try {
+      connectNWC(nwcUri);
+    } catch {
+      /* swallow — never log the URI */
+    }
+    if (connectTimeoutRef.current !== undefined) {
+      window.clearTimeout(connectTimeoutRef.current);
+    }
+    connectTimeoutRef.current = window.setTimeout(() => {
+      connectTimeoutRef.current = undefined;
+      setLoadingWallet((current) => {
+        if (current) {
+          setError(
+            "Couldn't reach your wallet. Check the connection and try again.",
+          );
+        }
+        return false;
+      });
+    }, 15_000);
+  }, []);
+
   // Bootstrap from the URL hash if Alby Hub sent us here with a one-tap link.
   // Persist the card config so future visits don't need the link, and connect
   // the NWC wallet directly (skipping the bitcoin-connect modal).
@@ -106,29 +136,15 @@ function App() {
       saveCardConfig(initialBootstrap.config);
     }
     if (initialBootstrap.nwcUri) {
-      // Wrapped — never surface the URI in error traces.
-      try {
-        connectNWC(initialBootstrap.nwcUri);
-      } catch {
-        /* swallow — never log the URI */
-      }
-      // Safety net: if the relay is unreachable or the URI is stale,
-      // bitcoin-connect dispatches onConnecting but never onConnected/
-      // onDisconnected, leaving the UI stuck on "Loading…". Reset the
-      // loading flag after a generous timeout so the user can retry.
-      const timeoutId = window.setTimeout(() => {
-        setLoadingWallet((current) => {
-          if (current) {
-            setError(
-              "Couldn't reach your wallet. Check the connection and try again.",
-            );
-          }
-          return false;
-        });
-      }, 15_000);
-      return () => window.clearTimeout(timeoutId);
+      connectWithNwc(initialBootstrap.nwcUri);
     }
-  }, []);
+    return () => {
+      if (connectTimeoutRef.current !== undefined) {
+        window.clearTimeout(connectTimeoutRef.current);
+        connectTimeoutRef.current = undefined;
+      }
+    };
+  }, [connectWithNwc]);
 
   React.useEffect(() => {
     const unsubConnected = onConnected(async (p) => {
@@ -321,12 +337,10 @@ function App() {
           )}
 
           {!provider && !isLoadingWallet && (
-            <button
-              className="btn btn-outline btn-lg w-full"
-              onClick={() => launchModal()}
-            >
-              Connect Lightning wallet
-            </button>
+            <ConnectWalletForm
+              onSubmit={connectWithNwc}
+              onOpenModal={() => launchModal()}
+            />
           )}
           {isLoadingWallet && !provider && (
             <button className="btn btn-outline btn-lg w-full" disabled>
