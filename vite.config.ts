@@ -33,7 +33,7 @@ export default defineConfig({
       includeAssets: ["mask-icon.svg", "/shortcut-icon-192.png"],
       manifest: {
         name: "Bitcoin Card Topup",
-        short_name: "Bitcoin Card Topup",
+        short_name: "Card Topup",
         description: "Instantly top up any crypto debit card with one tap via the Bitcoin Lightning Network",
         scope: "/",
         background_color: "#FFFFFF",
