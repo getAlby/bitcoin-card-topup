@@ -40,8 +40,8 @@ export function ConnectWalletForm({ onSubmit, onOpenModal }: Props) {
     <div className="space-y-3">
       <form onSubmit={handleSubmit} className="space-y-3">
         <label className="form-control">
-          <span className="label-text">NWC connection secret</span>
-          <div className="join w-full">
+          <span className="label-text text-sm font-semibold">NWC connection secret</span>
+          <div className="join w-full mt-1">
             <input
               type="password"
               className={`input input-bordered join-item flex-1 ${
@@ -75,7 +75,7 @@ export function ConnectWalletForm({ onSubmit, onOpenModal }: Props) {
         </label>
         <button
           type="submit"
-          className="btn btn-primary btn-lg w-full"
+          className="btn btn-primary w-full mt-2"
           disabled={!nwcUri.trim()}
         >
           Connect wallet
