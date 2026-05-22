@@ -14,6 +14,7 @@
     "@getalby/lightning-tools": "8.1.1",
     "@getalby/sdk": "8.0.1",
     "@lendasat/lendaswap-sdk-pure": "0.2.32",
+    "@yudiel/react-qr-scanner": "^2.6.0",
     "events": "3.3.0",
     "pulltorefreshjs": "^0.1.22",
     "react": "^19.1.1",
