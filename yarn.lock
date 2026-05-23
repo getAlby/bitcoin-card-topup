@@ -1104,23 +1104,15 @@
     qrcode-generator "1.4.4"
     zustand "^4.5.7"
 
-"@getalby/lightning-tools@8.1.1", "@getalby/lightning-tools@^8.1.1":
-  version "8.1.1"
-  resolved "https://registry.yarnpkg.com/@getalby/lightning-tools/-/lightning-tools-8.1.1.tgz#4bf8be9f30dd76f7dd082262e862e63c16591fae"
-  integrity sha512-gB+3fvTGz9bbl31JNgKMWqG4dZWgCxSB51fYn+F4tZ3x2h5oI/yHjvb6W9GBo2Zscr5gMP64gs0LlzKYoETlvQ==
-
 "@getalby/lightning-tools@^6.0.0":
   version "6.0.0"
   resolved "https://registry.yarnpkg.com/@getalby/lightning-tools/-/lightning-tools-6.0.0.tgz#07c19cdf29ed8e3d51f125fba780d31a29ba0864"
   integrity sha512-jpTO+7o1N1KhV5qT6qetPK+et6ZQshCzUMCRV8+Ek1NVlVU4ITIqOWRQ3kOrb0PhSxkbGN5G3d60HCi535hbDw==
 
-"@getalby/sdk@8.0.1":
-  version "8.0.1"
-  resolved "https://registry.yarnpkg.com/@getalby/sdk/-/sdk-8.0.1.tgz#6202ad96692e54e37bd7b3d0b530b7b1bb03f9b6"
-  integrity sha512-DaRmP5/0z0Xh+UqV4UgCLeYv05SkGsq+BS4sQr5dTI342IKz57T/5YaRGcCipmYPWXL88HObaivd8oJgf9LP3A==
-  dependencies:
-    "@getalby/lightning-tools" "^8.1.1"
-    nostr-tools "^2.23.3"
+"@getalby/lightning-tools@^8.1.1":
+  version "8.1.1"
+  resolved "https://registry.yarnpkg.com/@getalby/lightning-tools/-/lightning-tools-8.1.1.tgz#4bf8be9f30dd76f7dd082262e862e63c16591fae"
+  integrity sha512-gB+3fvTGz9bbl31JNgKMWqG4dZWgCxSB51fYn+F4tZ3x2h5oI/yHjvb6W9GBo2Zscr5gMP64gs0LlzKYoETlvQ==
 
 "@getalby/sdk@^6.0.2":
   version "6.0.2"
@@ -1129,6 +1121,14 @@
   dependencies:
     "@getalby/lightning-tools" "^6.0.0"
     nostr-tools "^2.17.0"
+
+"@getalby/sdk@^8.0.3":
+  version "8.0.3"
+  resolved "https://registry.yarnpkg.com/@getalby/sdk/-/sdk-8.0.3.tgz#dd59ce94682c1c041fa90b42c16e959aa2d59f03"
+  integrity sha512-vPEogAWwLHbL55COeXrRN7yRBXMDGDxX1M2A+o3Lqw60FFng6fa9FK9sw8ptdILMD1dQZq8FzPXuabQ7seoDBA==
+  dependencies:
+    "@getalby/lightning-tools" "^8.1.1"
+    nostr-tools "^2.23.3"
 
 "@humanfs/core@^0.19.1":
   version "0.19.1"
