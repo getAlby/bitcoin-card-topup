@@ -12,10 +12,11 @@ import { getFiatValue } from "@getalby/lightning-tools";
 import type { WebLNProvider } from "@webbtc/webln-types";
 import PullToRefresh from "pulltorefreshjs";
 import type { SwapStatus } from "@lendasat/lendaswap-sdk-pure";
+import { AppShell } from "./components/AppShell";
 import { Card } from "./components/Card";
 import { ConnectWalletForm } from "./components/ConnectWalletForm";
-import { HamburgerMenu } from "./components/HamburgerMenu";
 import { SetupForm } from "./components/SetupForm";
+import { Welcome } from "./components/Welcome";
 import {
   clearCardConfig,
   loadCardConfig,
@@ -83,6 +84,7 @@ function App() {
     () => initialBootstrap.config ?? loadCardConfig(),
   );
   const [editing, setEditing] = React.useState(false);
+  const [welcomeDismissed, setWelcomeDismissed] = React.useState(false);
   const [provider, setProvider] = React.useState<WebLNProvider>();
   const [isLoadingWallet, setLoadingWallet] = React.useState(false);
   const [walletBalance, setWalletBalance] = React.useState<number>();
@@ -272,48 +274,31 @@ function App() {
     }
   }
 
-  if (!config || editing) {
-    return (
-      <div className="min-h-screen bg-base-100">
-        <div className="navbar bg-base-100">
-          <div className="flex-1">
-            <h1 className="text-xl font-bold px-2">Bitcoin Card Topup</h1>
-          </div>
-        </div>
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-md mx-auto">
-            <SetupForm
-              initial={editing ? config : null}
-              onSave={handleSaveConfig}
-              onCancel={editing ? () => setEditing(false) : undefined}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const isWalletConnected = !!provider || isLoadingWallet;
+  const showWelcome = !config && !editing && !welcomeDismissed;
+  const isSetup = !config || editing;
 
   return (
-    <div className="min-h-screen bg-base-100">
-      <div className="navbar bg-base-100">
-        <div className="flex-1">
-          <h1 className="text-xl font-bold px-2">Bitcoin Card Topup</h1>
-        </div>
-        <div className="flex-none">
-          <HamburgerMenu
-            isCardConfigured={!!config}
-            isWalletConnected={isWalletConnected}
-            onEditCard={() => setEditing(true)}
-            onForgetCard={handleForgetCard}
-            onDisconnectWallet={() => disconnect()}
-          />
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto space-y-6">
+    <AppShell
+      isCardConfigured={!!config && !editing}
+      isWalletConnected={isWalletConnected}
+      onEditCard={() => setEditing(true)}
+      onForgetCard={handleForgetCard}
+      onDisconnectWallet={() => {
+        if (!confirm("Disconnect your Lightning wallet?")) return;
+        disconnect();
+      }}
+    >
+      {showWelcome ? (
+        <Welcome onGetStarted={() => setWelcomeDismissed(true)} />
+      ) : isSetup ? (
+        <SetupForm
+          initial={editing ? config : null}
+          onSave={handleSaveConfig}
+          onCancel={editing ? () => setEditing(false) : undefined}
+        />
+      ) : (
+        <>
           <Card config={config} />
 
           {(walletBalance !== undefined || isLoadingWallet || provider) && (
@@ -426,9 +411,9 @@ function App() {
               <span>{successMessage}</span>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </AppShell>
   );
 }
 

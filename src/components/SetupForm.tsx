@@ -31,6 +31,9 @@ export function SetupForm({ initial, onSave, onCancel }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSave) return;
+    if (!confirm("Please double check the address, currency and network. Funds sent to the wrong address, currency or network will be lost.")) {
+      return;
+    }
     onSave({
       label: label.trim() || undefined,
       destinationAddress: address as `0x${string}`,
@@ -40,13 +43,12 @@ export function SetupForm({ initial, onSave, onCancel }: Props) {
   }
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <form className="flex flex-col space-y-2" onSubmit={handleSubmit}>
       <h2 className="text-xl font-bold">
         {initial ? "Edit card" : "Set up your card"}
       </h2>
       <p className="text-sm opacity-80">
-        Each topup will swap Lightning sats into the token you choose here and
-        send it to your card's deposit address.
+        Each topup will instantly swap bitcoin into your crypto debit card's deposit address.
       </p>
 
       <label className="form-control">
@@ -61,7 +63,7 @@ export function SetupForm({ initial, onSave, onCancel }: Props) {
       </label>
 
       <label className="form-control">
-        <span className="label-text">Destination address</span>
+        <span className="label-text">Card deposit address</span>
         <input
           type="text"
           className={`input input-bordered w-full font-mono ${
@@ -75,25 +77,10 @@ export function SetupForm({ initial, onSave, onCancel }: Props) {
           spellCheck={false}
         />
         {!addressValid && (
-          <span className="label-text-alt text-error mt-1">
-            Not a valid EVM address
-          </span>
+          <p className="label-text-alt text-error mt-1 text-sm">
+            Not a valid deposit address
+          </p>
         )}
-      </label>
-
-      <label className="form-control">
-        <span className="label-text">Network</span>
-        <select
-          className="select select-bordered w-full"
-          value={chainId}
-          onChange={(e) => setChainId(Number(e.target.value))}
-        >
-          {SUPPORTED_CHAINS.map((c) => (
-            <option key={c.chainId} value={c.chainId}>
-              {c.name}
-            </option>
-          ))}
-        </select>
       </label>
 
       <label className="form-control">
@@ -106,6 +93,21 @@ export function SetupForm({ initial, onSave, onCancel }: Props) {
           {SUPPORTED_CURRENCIES.map((c) => (
             <option key={c} value={c}>
               {c}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="form-control">
+        <span className="label-text">Network</span>
+        <select
+          className="select select-bordered w-full"
+          value={chainId}
+          onChange={(e) => setChainId(Number(e.target.value))}
+        >
+          {SUPPORTED_CHAINS.map((c) => (
+            <option key={c.chainId} value={c.chainId}>
+              {c.name}
             </option>
           ))}
         </select>

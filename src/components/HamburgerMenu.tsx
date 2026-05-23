@@ -13,6 +13,9 @@ export function HamburgerMenu({
   onForgetCard,
   onDisconnectWallet,
 }: HamburgerMenuProps) {
+  const hasItems = isCardConfigured || isWalletConnected;
+  if (!hasItems) return null;
+
   return (
     <div className="dropdown dropdown-end">
       <div tabIndex={0} role="button" className="btn btn-square btn-ghost">
@@ -32,7 +35,7 @@ export function HamburgerMenu({
       </div>
       <ul
         tabIndex={0}
-        className="menu menu-sm dropdown-content mt-3 gap-2 z-10 p-2 shadow bg-base-100 rounded-box w-56"
+        className="menu menu-sm dropdown-content mt-3 gap-2 z-10 p-2 shadow bg-base-100 rounded-box w-64"
       >
         {isCardConfigured && (
           <>
