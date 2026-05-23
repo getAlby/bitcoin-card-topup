@@ -12,8 +12,8 @@ import { getFiatValue } from "@getalby/lightning-tools";
 import type { WebLNProvider } from "@webbtc/webln-types";
 import PullToRefresh from "pulltorefreshjs";
 import type { SwapStatus } from "@lendasat/lendaswap-sdk-pure";
+import { AppShell } from "./components/AppShell";
 import { ConnectWalletForm } from "./components/ConnectWalletForm";
-import { HamburgerMenu } from "./components/HamburgerMenu";
 import { SetupForm } from "./components/SetupForm";
 import {
   clearCardConfig,
@@ -279,50 +279,25 @@ function App() {
     }
   }
 
-  if (!config || editing) {
-    return (
-      <div className="min-h-screen bg-base-100">
-        <div className="navbar bg-base-100">
-          <div className="flex flex-1 flex-row flex-nowrap items-center px-2 gap-3">
-            <img src="/shortcut-icon.png" alt="" className="w-8 h-8 rounded-lg" />
-            <h1 className="text-xl font-bold">Bitcoin Card Topup</h1>
-          </div>
-        </div>
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-md mx-auto">
-            <SetupForm
-              initial={editing ? config : null}
-              onSave={handleSaveConfig}
-              onCancel={editing ? () => setEditing(false) : undefined}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const isWalletConnected = !!provider || isLoadingWallet;
+  const isSetup = !config || editing;
 
   return (
-    <div className="min-h-screen bg-base-100">
-      <div className="navbar bg-base-100">
-        <div className="flex flex-1 flex-row flex-nowrap items-center px-2 gap-3">
-          <img src="/shortcut-icon.png" alt="" className="w-8 h-8 rounded-lg" />
-          <h1 className="text-xl font-bold">Bitcoin Card Topup</h1>
-        </div>
-        <div className="flex-none">
-          <HamburgerMenu
-            isCardConfigured={!!config}
-            isWalletConnected={isWalletConnected}
-            onEditCard={() => setEditing(true)}
-            onForgetCard={handleForgetCard}
-            onDisconnectWallet={() => disconnect()}
-          />
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto space-y-6">
+    <AppShell
+      isCardConfigured={!!config && !editing}
+      isWalletConnected={isWalletConnected}
+      onEditCard={() => setEditing(true)}
+      onForgetCard={handleForgetCard}
+      onDisconnectWallet={() => disconnect()}
+    >
+      {isSetup ? (
+        <SetupForm
+          initial={editing ? config : null}
+          onSave={handleSaveConfig}
+          onCancel={editing ? () => setEditing(false) : undefined}
+        />
+      ) : (
+        <>
           <div className="relative aspect-[1.586/1] w-full rounded-2xl bg-black text-white shadow-lg overflow-hidden">
             <div className="absolute inset-0 p-6 flex flex-col justify-between">
               <h2 className="text-2xl font-semibold tracking-tight">
@@ -468,9 +443,9 @@ function App() {
               <span>{successMessage}</span>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </AppShell>
   );
 }
 
