@@ -15,6 +15,7 @@ import type { SwapStatus } from "@lendasat/lendaswap-sdk-pure";
 import { AppShell } from "./components/AppShell";
 import { ConnectWalletForm } from "./components/ConnectWalletForm";
 import { SetupForm } from "./components/SetupForm";
+import { Welcome } from "./components/Welcome";
 import {
   clearCardConfig,
   loadCardConfig,
@@ -90,6 +91,7 @@ function App() {
     () => initialBootstrap.config ?? loadCardConfig(),
   );
   const [editing, setEditing] = React.useState(false);
+  const [welcomeDismissed, setWelcomeDismissed] = React.useState(false);
   const [provider, setProvider] = React.useState<WebLNProvider>();
   const [isLoadingWallet, setLoadingWallet] = React.useState(false);
   const [walletBalance, setWalletBalance] = React.useState<number>();
@@ -280,6 +282,7 @@ function App() {
   }
 
   const isWalletConnected = !!provider || isLoadingWallet;
+  const showWelcome = !config && !editing && !welcomeDismissed;
   const isSetup = !config || editing;
 
   return (
@@ -290,7 +293,9 @@ function App() {
       onForgetCard={handleForgetCard}
       onDisconnectWallet={() => disconnect()}
     >
-      {isSetup ? (
+      {showWelcome ? (
+        <Welcome onGetStarted={() => setWelcomeDismissed(true)} />
+      ) : isSetup ? (
         <SetupForm
           initial={editing ? config : null}
           onSave={handleSaveConfig}
