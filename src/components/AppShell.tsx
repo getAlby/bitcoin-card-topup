@@ -39,7 +39,6 @@ export function AppShell({
           <HamburgerMenu
             isCardConfigured={isCardConfigured}
             isWalletConnected={isWalletConnected}
-            showInstallHint={showInstallHint}
             onEditCard={onEditCard}
             onForgetCard={onForgetCard}
             onDisconnectWallet={onDisconnectWallet}
