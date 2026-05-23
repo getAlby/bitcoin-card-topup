@@ -291,7 +291,10 @@ function App() {
       isWalletConnected={isWalletConnected}
       onEditCard={() => setEditing(true)}
       onForgetCard={handleForgetCard}
-      onDisconnectWallet={() => disconnect()}
+      onDisconnectWallet={() => {
+        if (!confirm("Disconnect your Lightning wallet?")) return;
+        disconnect();
+      }}
     >
       {showWelcome ? (
         <Welcome onGetStarted={() => setWelcomeDismissed(true)} />
