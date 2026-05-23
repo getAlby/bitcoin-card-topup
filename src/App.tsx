@@ -283,8 +283,9 @@ function App() {
     return (
       <div className="min-h-screen bg-base-100">
         <div className="navbar bg-base-100">
-          <div className="flex-1">
-            <h1 className="text-xl font-bold px-2">Bitcoin Card Topup</h1>
+          <div className="flex flex-1 flex-row flex-nowrap items-center px-2 gap-3">
+            <img src="/shortcut-icon.png" alt="" className="w-8 h-8 rounded-lg" />
+            <h1 className="text-xl font-bold">Bitcoin Card Topup</h1>
           </div>
         </div>
         <div className="container mx-auto px-4 py-8">
@@ -305,8 +306,9 @@ function App() {
   return (
     <div className="min-h-screen bg-base-100">
       <div className="navbar bg-base-100">
-        <div className="flex-1">
-          <h1 className="text-xl font-bold px-2">Bitcoin Card Topup</h1>
+        <div className="flex flex-1 flex-row flex-nowrap items-center px-2 gap-3">
+          <img src="/shortcut-icon.png" alt="" className="w-8 h-8 rounded-lg" />
+          <h1 className="text-xl font-bold">Bitcoin Card Topup</h1>
         </div>
         <div className="flex-none">
           <HamburgerMenu
