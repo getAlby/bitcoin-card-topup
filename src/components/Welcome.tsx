@@ -28,7 +28,7 @@ export function Welcome({ onGetStarted }: Props) {
           </div>
           <div className="flex gap-3">
             <span className="font-bold text-primary">2.</span>
-            <p>Connect your Lightning wallet.</p>
+            <p>Connect your bitcoin lightning wallet.</p>
           </div>
           <div className="flex gap-3">
             <span className="font-bold text-primary">3.</span>

@@ -285,7 +285,7 @@ function App() {
       onEditCard={() => setEditing(true)}
       onForgetCard={handleForgetCard}
       onDisconnectWallet={() => {
-        if (!confirm("Disconnect your Lightning wallet?")) return;
+        if (!confirm("Disconnect your bitcoin lightning wallet?")) return;
         disconnect();
       }}
     >
