@@ -66,7 +66,7 @@ function statusLabel(status: SwapStatus | undefined): string {
     case "clientfundingseen":
       return "Lightning payment seen…";
     case "clientfunded":
-      return "Lightning payment received, funding card…";
+      return "Funding card…";
     case "serverfunded":
       return "Claiming on-chain…";
     case "clientredeeming":
