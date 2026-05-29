@@ -1,5 +1,13 @@
 import { SUPPORTED_CHAINS } from "../lendaswap";
+import { PROVIDERS } from "../providers";
 import type { CardConfig } from "../config";
+
+// Fallback card name when the user didn't set a label: use the provider's
+// display name, except for "other" which has no meaningful name → "Card".
+function defaultLabel(config: CardConfig): string {
+  if (config.provider === "other") return "Card";
+  return PROVIDERS.find((p) => p.id === config.provider)?.name ?? "Card";
+}
 
 function chainName(chainId: number): string {
   return (
@@ -10,6 +18,11 @@ function chainName(chainId: number): string {
 
 function truncateAddress(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
+// Lightning addresses are human-readable (user@domain); only truncate very long ones.
+function displayLightningAddress(addr: string): string {
+  return addr.length > 28 ? `${addr.slice(0, 16)}…${addr.slice(-8)}` : addr;
 }
 
 // Three concentric arcs, the universal contactless-payment glyph.
@@ -36,7 +49,7 @@ interface CardProps {
 }
 
 export function Card({ config }: CardProps) {
-  const displayLabel = config.label?.trim() || "Card";
+  const displayLabel = config.label?.trim() || defaultLabel(config);
 
   return (
     <div
@@ -70,17 +83,27 @@ export function Card({ config }: CardProps) {
 
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-mono text-xs text-white/80">
-              {truncateAddress(config.destinationAddress)}
+            <p className="font-mono text-xs text-white/80 truncate">
+              {config.fundingMethod === "lightning"
+                ? displayLightningAddress(config.lightningAddress)
+                : truncateAddress(config.destinationAddress)}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium tracking-wide text-white ring-1 ring-white/15 backdrop-blur-sm">
-              {config.currency}
-            </span>
-            <span className="text-[11px] text-white/60">
-              {chainName(config.chainId)}
-            </span>
+            {config.fundingMethod === "lightning" ? (
+              <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium tracking-wide text-white ring-1 ring-white/15 backdrop-blur-sm">
+                Lightning
+              </span>
+            ) : (
+              <>
+                <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium tracking-wide text-white ring-1 ring-white/15 backdrop-blur-sm">
+                  {config.currency}
+                </span>
+                <span className="text-[11px] text-white/60">
+                  {chainName(config.chainId)}
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>

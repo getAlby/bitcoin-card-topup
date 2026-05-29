@@ -23,23 +23,31 @@ import {
   saveCardConfig,
   type CardConfig,
 } from "./config";
-import { readHashBootstrap } from "./hashBootstrap";
+import { providerMinAmount, readProviderParam } from "./providers";
 import {
   claimSwap,
   createTopupSwap,
   subscribeToSwap,
 } from "./lendaswap";
+import { createLightningTopupInvoice } from "./lightningTopup";
 
 const PRESET_AMOUNTS = [10, 25, 100];
 const MIN_AMOUNT_USD = 2;
+
+// Pick a sensible default selected amount that respects the provider minimum:
+// the lowest preset at or above the minimum, falling back to the minimum itself.
+function defaultAmount(minAmount: number): number {
+  return PRESET_AMOUNTS.find((a) => a >= minAmount) ?? minAmount;
+}
 
 init({
   appName: "Bitcoin Card Topup",
 });
 
-// Read once at module-load, before any analytics/logging could grab
-// document.URL. Strips the hash immediately — see hashBootstrap.ts.
-const initialBootstrap = readHashBootstrap();
+// Optional ?provider= query param used to pre-select the provider in the setup
+// form (only relevant when no card is configured yet). Read non-destructively —
+// the URL is never modified.
+const initialProvider = readProviderParam();
 
 function truncateAddress(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
@@ -80,8 +88,8 @@ function statusLabel(status: SwapStatus | undefined): string {
 }
 
 function App() {
-  const [config, setConfig] = React.useState<CardConfig | null>(
-    () => initialBootstrap.config ?? loadCardConfig(),
+  const [config, setConfig] = React.useState<CardConfig | null>(() =>
+    loadCardConfig(),
   );
   const [editing, setEditing] = React.useState(false);
   const [welcomeDismissed, setWelcomeDismissed] = React.useState(false);
@@ -96,6 +104,10 @@ function App() {
   );
   const [isTopping, setTopping] = React.useState(false);
   const [swapStatus, setSwapStatus] = React.useState<SwapStatus | undefined>();
+  // Progress label for the swap-free Lightning-address path.
+  const [lightningStatus, setLightningStatus] = React.useState<
+    string | undefined
+  >();
   const [error, setError] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(
     null,
@@ -130,23 +142,15 @@ function App() {
     }, 15_000);
   }, []);
 
-  // Bootstrap from the URL hash if Alby Hub sent us here with a one-tap link.
-  // Persist the card config so future visits don't need the link, and connect
-  // the NWC wallet directly (skipping the bitcoin-connect modal).
+  // Clear any pending connect timeout when the component unmounts.
   React.useEffect(() => {
-    if (initialBootstrap.config) {
-      saveCardConfig(initialBootstrap.config);
-    }
-    if (initialBootstrap.nwcUri) {
-      connectWithNwc(initialBootstrap.nwcUri);
-    }
     return () => {
       if (connectTimeoutRef.current !== undefined) {
         window.clearTimeout(connectTimeoutRef.current);
         connectTimeoutRef.current = undefined;
       }
     };
-  }, [connectWithNwc]);
+  }, []);
 
   React.useEffect(() => {
     const unsubConnected = onConnected(async (p) => {
@@ -189,6 +193,17 @@ function App() {
     });
   }, []);
 
+  // Minimum top-up amount for the current card's provider.
+  const minAmount = config ? providerMinAmount(config.provider) : MIN_AMOUNT_USD;
+
+  // Bump the selected amount up to the minimum when it would otherwise be below
+  // it (e.g. after switching to a provider with a higher minimum like Freedomia).
+  React.useEffect(() => {
+    setSelectedAmount((current) =>
+      current !== null && current < minAmount ? defaultAmount(minAmount) : current,
+    );
+  }, [minAmount]);
+
   function handleSaveConfig(next: CardConfig) {
     saveCardConfig(next);
     setConfig(next);
@@ -206,8 +221,8 @@ function App() {
 
   async function handleTopup() {
     if (!config || !provider || !selectedAmount) return;
-    if (selectedAmount < MIN_AMOUNT_USD) {
-      setError(`Minimum top up is $${MIN_AMOUNT_USD}.`);
+    if (selectedAmount < minAmount) {
+      setError(`Minimum top up is $${minAmount}.`);
       return;
     }
 
@@ -215,9 +230,25 @@ function App() {
     setError(null);
     setSuccessMessage(null);
     setSwapStatus(undefined);
+    setLightningStatus(undefined);
     let unsubscribe: (() => void) | undefined;
 
     try {
+      if (config.fundingMethod === "lightning") {
+        setLightningStatus("Requesting invoice…");
+        const bolt11 = await createLightningTopupInvoice({
+          lightningAddress: config.lightningAddress,
+          amountUsd: selectedAmount,
+        });
+        setLightningStatus("Waiting for Lightning payment…");
+        await provider.sendPayment(bolt11);
+        setSuccessMessage(
+          `Sent $${selectedAmount} to ${config.lightningAddress}.`,
+        );
+        setSelectedAmount(defaultAmount(minAmount));
+        return;
+      }
+
       const swap = await createTopupSwap({
         chainId: config.chainId,
         currency: config.currency,
@@ -264,7 +295,7 @@ function App() {
           config.destinationAddress,
         )}.`,
       );
-      setSelectedAmount(10);
+      setSelectedAmount(defaultAmount(minAmount));
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setError(message);
@@ -294,6 +325,7 @@ function App() {
       ) : isSetup ? (
         <SetupForm
           initial={editing ? config : null}
+          initialProvider={initialProvider}
           onSave={handleSaveConfig}
           onCancel={editing ? () => setEditing(false) : undefined}
         />
@@ -337,7 +369,9 @@ function App() {
           {provider && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <p className="text-sm font-medium">Amount</p>
+                <p className="text-sm font-medium">
+                  Minimum topup amount: ${minAmount}
+                </p>
                 <div className="grid grid-cols-2 gap-3">
                   {PRESET_AMOUNTS.map((amount) => (
                     <button
@@ -348,7 +382,7 @@ function App() {
                           : "btn-outline"
                       }`}
                       onClick={() => setSelectedAmount(amount)}
-                      disabled={isTopping}
+                      disabled={isTopping || amount < minAmount}
                     >
                       ${amount}
                     </button>
@@ -362,12 +396,12 @@ function App() {
                     }`}
                     onClick={() => {
                       const input = prompt(
-                        `Enter amount in USD (minimum $${MIN_AMOUNT_USD})`,
+                        `Enter amount in USD (minimum $${minAmount})`,
                       );
                       if (!input) return;
                       const value = parseFloat(input);
-                      if (Number.isNaN(value) || value < MIN_AMOUNT_USD) {
-                        alert(`Minimum top up amount is $${MIN_AMOUNT_USD}`);
+                      if (Number.isNaN(value) || value < minAmount) {
+                        alert(`Minimum top up amount is $${minAmount}`);
                         return;
                       }
                       setSelectedAmount(value);
@@ -384,13 +418,17 @@ function App() {
 
               <button
                 className="btn btn-primary btn-lg w-full"
-                disabled={!selectedAmount || isTopping}
+                disabled={
+                  !selectedAmount || selectedAmount < minAmount || isTopping
+                }
                 onClick={handleTopup}
               >
                 {isTopping ? (
                   <>
                     <span className="loading loading-spinner"></span>
-                    {statusLabel(swapStatus)}
+                    {config.fundingMethod === "lightning"
+                      ? lightningStatus ?? "Topping up…"
+                      : statusLabel(swapStatus)}
                   </>
                 ) : selectedAmount ? (
                   `Top up $${selectedAmount}`

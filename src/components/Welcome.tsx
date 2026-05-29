@@ -24,7 +24,7 @@ export function Welcome({ onGetStarted }: Props) {
         <div className="space-y-3">
           <div className="flex gap-3">
             <span className="font-bold text-primary">1.</span>
-            <p>Add your card's deposit address, currency and network.</p>
+            <p>Choose your card provider and enter its details.</p>
           </div>
           <div className="flex gap-3">
             <span className="font-bold text-primary">2.</span>
