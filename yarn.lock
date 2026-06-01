@@ -1182,10 +1182,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@lendasat/lendaswap-sdk-pure@0.2.32":
-  version "0.2.32"
-  resolved "https://registry.yarnpkg.com/@lendasat/lendaswap-sdk-pure/-/lendaswap-sdk-pure-0.2.32.tgz#6de65f405ab22f35440977e880593ee897ea6980"
-  integrity sha512-XsxrPScahZCDEQ6/YQvLiMSvJqdEWsyxz0WROpQt/LoW0V7O/oHrWZtUBm1Rad4QKZID27+jVjn8KKDJfMknhw==
+"@lendasat/lendaswap-sdk-pure@^0.2.38":
+  version "0.2.38"
+  resolved "https://registry.yarnpkg.com/@lendasat/lendaswap-sdk-pure/-/lendaswap-sdk-pure-0.2.38.tgz#537f2ed10a9c58e84ed82615e06d66a9d059ca1c"
+  integrity sha512-FyBRlyy+y7B1pMF5cmbNmu0onshsB9ziZxOvPeOmPomfZMsjyGtfeUoWpFl2pg12wlaxfeWidXhlg7LXjFzAaA==
   dependencies:
     "@arkade-os/sdk" "^0.4.6"
     "@noble/curves" "^2.2.0"
