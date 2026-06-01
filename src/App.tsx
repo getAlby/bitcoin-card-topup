@@ -9,6 +9,8 @@ import {
   onDisconnected,
 } from "@getalby/bitcoin-connect-react";
 import { getFiatValue } from "@getalby/lightning-tools";
+import { NostrWebLNProvider } from "@getalby/sdk";
+import type { Nip47TransactionMetadata } from "@getalby/sdk";
 import type { WebLNProvider } from "@webbtc/webln-types";
 import PullToRefresh from "pulltorefreshjs";
 import type { SwapStatus } from "@lendasat/lendaswap-sdk-pure";
@@ -51,6 +53,22 @@ const initialProvider = readProviderParam();
 
 function truncateAddress(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
+// Pay a BOLT-11 invoice with the connected wallet. NWC connections expose an
+// NWCClient that lets us attach metadata to the payment, which the wallet stores
+// on the transaction so it can be identified later; other providers only offer
+// the metadata-less WebLN `sendPayment`.
+async function payInvoice(
+  provider: WebLNProvider,
+  bolt11: string,
+  metadata?: Nip47TransactionMetadata,
+): Promise<void> {
+  if (metadata && provider instanceof NostrWebLNProvider) {
+    await provider.client.payInvoice({ invoice: bolt11, metadata });
+    return;
+  }
+  await provider.sendPayment(bolt11);
 }
 
 // Terminal statuses where we should stop subscribing and decide success/refund.
@@ -241,7 +259,10 @@ function App() {
           amountUsd: selectedAmount,
         });
         setLightningStatus("Waiting for Lightning payment…");
-        await provider.sendPayment(bolt11);
+        await payInvoice(provider, bolt11, {
+          comment: `Bitcoin card top-up ($${selectedAmount})`,
+          recipient_data: { identifier: config.lightningAddress },
+        });
         setSuccessMessage(
           `Sent $${selectedAmount} to ${config.lightningAddress}.`,
         );
@@ -257,7 +278,10 @@ function App() {
       });
       setSwapStatus(swap.status);
 
-      const paymentPromise = provider.sendPayment(swap.bolt11_invoice);
+      const paymentPromise = payInvoice(provider, swap.bolt11_invoice, {
+        comment: `Bitcoin card top-up ($${selectedAmount} ${config.currency})`,
+        recipient_data: { identifier: config.destinationAddress },
+      });
 
       await new Promise<void>((resolve, reject) => {
         let settled = false;
