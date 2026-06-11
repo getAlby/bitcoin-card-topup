@@ -9,18 +9,22 @@ import {
 interface AppShellProps {
   isCardConfigured: boolean;
   isWalletConnected: boolean;
+  showPreviousSwaps: boolean;
   onEditCard: () => void;
   onForgetCard: () => void;
   onDisconnectWallet: () => void;
+  onViewSwaps: () => void;
   children: React.ReactNode;
 }
 
 export function AppShell({
   isCardConfigured,
   isWalletConnected,
+  showPreviousSwaps,
   onEditCard,
   onForgetCard,
   onDisconnectWallet,
+  onViewSwaps,
   children,
 }: AppShellProps) {
   const showInstallHint = useShouldShowInstallHint();
@@ -39,9 +43,11 @@ export function AppShell({
           <HamburgerMenu
             isCardConfigured={isCardConfigured}
             isWalletConnected={isWalletConnected}
+            showPreviousSwaps={showPreviousSwaps}
             onEditCard={onEditCard}
             onForgetCard={onForgetCard}
             onDisconnectWallet={onDisconnectWallet}
+            onViewSwaps={onViewSwaps}
           />
         </div>
       </div>

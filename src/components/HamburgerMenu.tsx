@@ -1,19 +1,25 @@
 interface HamburgerMenuProps {
   isCardConfigured: boolean;
   isWalletConnected: boolean;
+  // Only swap-funded cards have lendaswap swaps to show; the Lightning-address
+  // flow doesn't use lendaswap.
+  showPreviousSwaps: boolean;
   onEditCard: () => void;
   onForgetCard: () => void;
   onDisconnectWallet: () => void;
+  onViewSwaps: () => void;
 }
 
 export function HamburgerMenu({
   isCardConfigured,
   isWalletConnected,
+  showPreviousSwaps,
   onEditCard,
   onForgetCard,
   onDisconnectWallet,
+  onViewSwaps,
 }: HamburgerMenuProps) {
-  const hasItems = isCardConfigured || isWalletConnected;
+  const hasItems = isCardConfigured || isWalletConnected || showPreviousSwaps;
   if (!hasItems) return null;
 
   return (
@@ -55,6 +61,13 @@ export function HamburgerMenu({
           <li>
             <button onClick={onDisconnectWallet} className="text-left">
               Disconnect wallet
+            </button>
+          </li>
+        )}
+        {showPreviousSwaps && (
+          <li>
+            <button onClick={onViewSwaps} className="text-left">
+              Previous swaps
             </button>
           </li>
         )}

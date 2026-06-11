@@ -3,9 +3,14 @@ import {
   Client,
   IdbSwapStorage,
   IdbWalletStorage,
+  type GetSwapResponse,
   type LightningToEvmSwapResponse,
+  type StoredSwap,
+  type SwapStatus,
   type SwapStatusHandler,
 } from "@lendasat/lendaswap-sdk-pure";
+
+export type { StoredSwap, SwapStatus };
 
 const API_BASE_URL = "https://api.satora.io";
 
@@ -104,4 +109,135 @@ export async function subscribeToSwap(
 export async function claimSwap(swapId: string) {
   const client = await getClient();
   return client.claim(swapId);
+}
+
+// Terminal statuses where we stop subscribing and decide success/refund.
+export const SUCCESS_STATUSES: SwapStatus[] = [
+  "clientredeemed",
+  "serverredeemed",
+];
+export const FAILURE_STATUSES: SwapStatus[] = [
+  "expired",
+  "clientrefunded",
+  "clientfundedserverrefunded",
+  "clientrefundedserverrefunded",
+  "clientrefundedserverfunded",
+  "clientinvalidfunded",
+  "clientfundedtoolate",
+  "serverwontfund",
+];
+
+export function isSuccessStatus(status: SwapStatus): boolean {
+  return SUCCESS_STATUSES.includes(status);
+}
+
+export function isTerminalStatus(status: SwapStatus): boolean {
+  return SUCCESS_STATUSES.includes(status) || FAILURE_STATUSES.includes(status);
+}
+
+// Whether the Lightning payment has been registered by the swap. Before this,
+// the swap is still `pending` and a payment failure is genuinely fatal; after
+// it, a thrown payInvoice is the held-invoice client timeout and can be ignored.
+export function paymentSeen(status: SwapStatus | undefined): boolean {
+  return status !== undefined && status !== "pending";
+}
+
+export function statusLabel(status: SwapStatus | undefined): string {
+  switch (status) {
+    case undefined:
+      return "Preparing swap…";
+    case "pending":
+      return "Waiting for Lightning payment…";
+    case "clientfundingseen":
+      return "Lightning payment seen…";
+    case "clientfunded":
+      return "Funding card…";
+    case "serverfunded":
+      return "Claiming on-chain…";
+    case "clientredeeming":
+      return "Claiming on-chain…";
+    case "clientredeemed":
+    case "serverredeemed":
+      return "Done!";
+    case "clientfundedserverrefunded":
+      return "Refunded";
+    default:
+      return status;
+  }
+}
+
+// All swaps persisted in IndexedDB, newest first.
+export async function listSwaps(): Promise<StoredSwap[]> {
+  const client = await getClient();
+  const swaps = await client.listAllSwaps();
+  return swaps.sort((a, b) => {
+    const aTime = a.storedAt || Date.parse(a.response.created_at);
+    const bTime = b.storedAt || Date.parse(b.response.created_at);
+    return bTime - aTime;
+  });
+}
+
+// Fetch the latest status from the server and persist it locally.
+export async function refreshSwapStatus(id: string): Promise<GetSwapResponse> {
+  const client = await getClient();
+  return client.getSwap(id, { updateStorage: true });
+}
+
+// Drive a swap to completion: subscribe to status updates, auto-claim once the
+// server funds the VHTLC, and resolve/reject on a terminal status.
+//
+// `payment` is the (held) Lightning invoice payment, if one is in flight. Its
+// rejection is only fatal while the payment was never seen — once the swap has
+// progressed past `pending`, a thrown payInvoice is the wallet's client-side
+// timeout on the held invoice and is ignored so we keep monitoring to the end.
+export async function runSwap(
+  swapId: string,
+  onStatus: (status: SwapStatus) => void,
+  payment?: Promise<unknown>,
+): Promise<void> {
+  const client = await getClient();
+  let latestStatus: SwapStatus | undefined;
+
+  await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    // Holder so the status callback can unsubscribe even if it fires
+    // synchronously, before subscribeToSwaps returns the unsubscribe fn.
+    const sub: { unsubscribe?: () => void } = {};
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      sub.unsubscribe?.();
+      fn();
+    };
+
+    let claimStarted = false;
+    sub.unsubscribe = client.subscribeToSwaps([swapId], (_id, status) => {
+      latestStatus = status;
+      onStatus(status);
+      if (status === "serverfunded" && !claimStarted) {
+        claimStarted = true;
+        client
+          .claim(swapId)
+          .catch((err) =>
+            settle(() =>
+              reject(err instanceof Error ? err : new Error(String(err))),
+            ),
+          );
+      }
+      if (SUCCESS_STATUSES.includes(status)) {
+        settle(() => resolve());
+      } else if (FAILURE_STATUSES.includes(status)) {
+        settle(() => reject(new Error(`Swap ${status}`)));
+      }
+    });
+
+    payment?.catch((err) => {
+      // Held-invoice client timeout once the swap is mid-flight — ignore and
+      // keep waiting on the swap status. Only fatal if payment never registered.
+      if (paymentSeen(latestStatus)) return;
+      settle(() =>
+        reject(err instanceof Error ? err : new Error(String(err))),
+      );
+    });
+  });
 }
