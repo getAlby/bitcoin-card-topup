@@ -9,8 +9,6 @@ import {
   onDisconnected,
 } from "@getalby/bitcoin-connect-react";
 import { getFiatValue } from "@getalby/lightning-tools";
-import { NostrWebLNProvider } from "@getalby/sdk";
-import type { Nip47TransactionMetadata } from "@getalby/sdk";
 import type { WebLNProvider } from "@webbtc/webln-types";
 import PullToRefresh from "pulltorefreshjs";
 import type { SwapStatus } from "@lendasat/lendaswap-sdk-pure";
@@ -26,12 +24,11 @@ import {
   type CardConfig,
 } from "./config";
 import { providerMinAmount, readProviderParam } from "./providers";
-import {
-  claimSwap,
-  createTopupSwap,
-  subscribeToSwap,
-} from "./lendaswap";
+import { createTopupSwap, runSwap, statusLabel } from "./lendaswap";
+import { payInvoice } from "./pay";
 import { createLightningTopupInvoice } from "./lightningTopup";
+
+const PreviousSwaps = React.lazy(() => import("./components/PreviousSwaps"));
 
 const PRESET_AMOUNTS = [10, 25, 100];
 const MIN_AMOUNT_USD = 2;
@@ -53,56 +50,6 @@ const initialProvider = readProviderParam();
 
 function truncateAddress(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
-
-// Pay a BOLT-11 invoice with the connected wallet. NWC connections expose an
-// NWCClient that lets us attach metadata to the payment, which the wallet stores
-// on the transaction so it can be identified later; other providers only offer
-// the metadata-less WebLN `sendPayment`.
-async function payInvoice(
-  provider: WebLNProvider,
-  bolt11: string,
-  metadata?: Nip47TransactionMetadata,
-): Promise<void> {
-  if (metadata && provider instanceof NostrWebLNProvider) {
-    await provider.client.payInvoice({ invoice: bolt11, metadata });
-    return;
-  }
-  await provider.sendPayment(bolt11);
-}
-
-// Terminal statuses where we should stop subscribing and decide success/refund.
-const SUCCESS_STATUSES: SwapStatus[] = ["clientredeemed", "serverredeemed"];
-const FAILURE_STATUSES: SwapStatus[] = [
-  "expired",
-  "clientrefunded",
-  "clientrefundedserverrefunded",
-  "clientrefundedserverfunded",
-  "clientinvalidfunded",
-  "clientfundedtoolate",
-  "serverwontfund",
-];
-
-function statusLabel(status: SwapStatus | undefined): string {
-  switch (status) {
-    case undefined:
-      return "Preparing swap…";
-    case "pending":
-      return "Waiting for Lightning payment…";
-    case "clientfundingseen":
-      return "Lightning payment seen…";
-    case "clientfunded":
-      return "Funding card…";
-    case "serverfunded":
-      return "Claiming on-chain…";
-    case "clientredeeming":
-      return "Claiming on-chain…";
-    case "clientredeemed":
-    case "serverredeemed":
-      return "Done!";
-    default:
-      return status;
-  }
 }
 
 function App() {
@@ -130,6 +77,7 @@ function App() {
   const [successMessage, setSuccessMessage] = React.useState<string | null>(
     null,
   );
+  const [showSwaps, setShowSwaps] = React.useState(false);
 
   const connectTimeoutRef = React.useRef<number | undefined>(undefined);
 
@@ -249,7 +197,6 @@ function App() {
     setSuccessMessage(null);
     setSwapStatus(undefined);
     setLightningStatus(undefined);
-    let unsubscribe: (() => void) | undefined;
 
     try {
       if (config.fundingMethod === "lightning") {
@@ -278,41 +225,16 @@ function App() {
       });
       setSwapStatus(swap.status);
 
+      // The invoice is held until the swap completes, so payInvoice may throw on
+      // a client-side timeout while the swap is still progressing. runSwap only
+      // treats that as fatal if the payment was never seen — otherwise it keeps
+      // monitoring the swap to completion.
       const paymentPromise = payInvoice(provider, swap.bolt11_invoice, {
         comment: `Bitcoin card top-up ($${selectedAmount} ${config.currency})`,
         recipient_data: { identifier: config.destinationAddress },
       });
 
-      await new Promise<void>((resolve, reject) => {
-        let settled = false;
-        const settle = (fn: () => void) => {
-          if (settled) return;
-          settled = true;
-          fn();
-        };
-
-        let claimStarted = false;
-        subscribeToSwap(swap.id, (_swapId, status) => {
-          setSwapStatus(status);
-          if (status === "serverfunded" && !claimStarted) {
-            claimStarted = true;
-            claimSwap(swap.id).catch((err) =>
-              settle(() => reject(err instanceof Error ? err : new Error(String(err)))),
-            );
-          }
-          if (SUCCESS_STATUSES.includes(status)) {
-            settle(() => resolve());
-          } else if (FAILURE_STATUSES.includes(status)) {
-            settle(() => reject(new Error(`Swap ${status}`)));
-          }
-        }).then((unsub) => {
-          unsubscribe = unsub;
-        });
-
-        paymentPromise.catch((err) =>
-          settle(() => reject(err instanceof Error ? err : new Error(String(err)))),
-        );
-      });
+      await runSwap(swap.id, setSwapStatus, paymentPromise);
 
       setSuccessMessage(
         `Sent $${selectedAmount} ${config.currency} to ${truncateAddress(
@@ -324,7 +246,6 @@ function App() {
       const message = e instanceof Error ? e.message : String(e);
       setError(message);
     } finally {
-      unsubscribe?.();
       setTopping(false);
     }
   }
@@ -337,13 +258,27 @@ function App() {
     <AppShell
       isCardConfigured={!!config && !editing}
       isWalletConnected={isWalletConnected}
+      // Only for a configured swap-funded card: the Lightning-address flow
+      // doesn't use lendaswap, and there's nothing to show before a card is set.
+      // `!== "lightning"` (rather than `=== "swap"`) also covers legacy configs,
+      // which predate the fundingMethod field and represent swap-funded cards.
+      showPreviousSwaps={!!config && !editing && config.fundingMethod !== "lightning"}
       onEditCard={() => setEditing(true)}
       onForgetCard={handleForgetCard}
       onDisconnectWallet={() => {
         if (!confirm("Disconnect your bitcoin lightning wallet?")) return;
         disconnect();
       }}
+      onViewSwaps={() => setShowSwaps(true)}
     >
+      {showSwaps && (
+        <React.Suspense fallback={null}>
+          <PreviousSwaps
+            provider={provider}
+            onClose={() => setShowSwaps(false)}
+          />
+        </React.Suspense>
+      )}
       {showWelcome ? (
         <Welcome onGetStarted={() => setWelcomeDismissed(true)} />
       ) : isSetup ? (
