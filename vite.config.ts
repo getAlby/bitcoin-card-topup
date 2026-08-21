@@ -20,10 +20,10 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
-        // The bundle exceeds workbox's 2 MiB default (the Lightning-address /
-        // LNURL tooling pulls in extra deps), so raise the precache limit to
-        // keep the main bundle available offline.
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        // The bundle exceeds workbox's 2 MiB default (the swap SDK pulls in
+        // viem/arkade, plus the Lightning-address / LNURL tooling), so raise
+        // the precache limit to keep the main bundle available offline.
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       // Generate and serve a fresh SW + manifest in dev too. Without this,
       // a stale SW from a prior preview/prod session keeps trying to precache

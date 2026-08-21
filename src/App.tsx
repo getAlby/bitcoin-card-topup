@@ -11,7 +11,7 @@ import {
 import { getFiatValue } from "@getalby/lightning-tools";
 import type { WebLNProvider } from "@webbtc/webln-types";
 import PullToRefresh from "pulltorefreshjs";
-import type { SwapStatus } from "@lendasat/lendaswap-sdk-pure";
+import type { SwapStatus } from "@satora/swap";
 import { AppShell } from "./components/AppShell";
 import { Card } from "./components/Card";
 import { ConnectWalletForm } from "./components/ConnectWalletForm";

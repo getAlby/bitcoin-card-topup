@@ -8,7 +8,7 @@ import {
   type StoredSwap,
   type SwapStatus,
   type SwapStatusHandler,
-} from "@lendasat/lendaswap-sdk-pure";
+} from "@satora/swap";
 
 export type { StoredSwap, SwapStatus };
 
@@ -159,8 +159,15 @@ export function statusLabel(status: SwapStatus | undefined): string {
     case "clientredeemed":
     case "serverredeemed":
       return "Done!";
-    case "clientfundedserverrefunded":
+    // Your funds came back to your wallet.
+    case "clientrefunded":
+    case "clientrefundedserverrefunded":
       return "Refunded";
+    // The server unwound its side, but your Lightning payment is still held and
+    // will be returned only when the held invoice expires (no client refund
+    // exists for Lightning→EVM). Don't call this "Refunded" — funds aren't back.
+    case "clientfundedserverrefunded":
+      return "Failed — refund pending";
     default:
       return status;
   }

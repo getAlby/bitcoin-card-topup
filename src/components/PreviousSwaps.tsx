@@ -1,6 +1,6 @@
 import React from "react";
 import type { WebLNProvider } from "@webbtc/webln-types";
-import type { LightningToEvmSwapResponse } from "@lendasat/lendaswap-sdk-pure";
+import type { LightningToEvmSwapResponse } from "@satora/swap";
 import {
   isSuccessStatus,
   isTerminalStatus,
