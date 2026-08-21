@@ -14,6 +14,15 @@ export type { StoredSwap, SwapStatus };
 
 const API_BASE_URL = "https://api.satora.io";
 
+// Account-abstraction config for the sponsored settlement UserOp used when
+// claiming Arbitrum EVM DEX/CCTP swaps (same bundler / Gas Manager policy as
+// app.satora.io).
+// TODO: remove in next release
+const AA_CONFIG = {
+  bundlerUrl: "https://arb-mainnet.g.alchemy.com/v2/ZaG_75AoAHzPqzmys5jpD",
+  paymasterPolicyId: "878b1c90-5b53-4c9c-8892-6d7659dd2e72",
+};
+
 let clientPromise: Promise<Client> | null = null;
 
 function getClient(): Promise<Client> {
@@ -22,6 +31,7 @@ function getClient(): Promise<Client> {
       .withBaseUrl(API_BASE_URL)
       .withSignerStorage(new IdbWalletStorage())
       .withSwapStorage(new IdbSwapStorage())
+      .withAa(AA_CONFIG)
       .build();
   }
   return clientPromise;
